@@ -1,11 +1,100 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>幼兒園後台管理</title>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文林附幼 - 學校首頁 (靜態展示)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f3ed; }
+        .handwriting-font { font-family: 'Klee One', cursive; }
+    </style>
 </head>
-<body>
-    </body>
+<body class="min-h-screen">
+
+    <header class="bg-teal-700 text-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-3xl font-bold handwriting-font">文林附幼</h1>
+            <nav class="space-x-4 flex items-center">
+                <a href="#announcements" class="hover:text-amber-300 transition duration-150">最新公告</a>
+                <a href="#calendar" class="hover:text-amber-300 transition duration-150">學年行事曆</a>
+                <a href="#gallery" class="hover:text-amber-300 transition duration-150">活動花絮</a>
+                <a href="teacher_admin_panel.html" class="bg-amber-500 hover:bg-amber-600 px-3 py-2 rounded-lg text-teal-800 font-semibold transition duration-150 shadow-md">教師登入後台</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <!-- 服務快速連結 -->
+        <section class="mb-12 p-6 bg-white rounded-xl shadow-xl">
+            <h2 class="text-2xl font-bold text-teal-800 mb-4 handwriting-font">家長服務快速通道</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- 這些按鈕僅為靜態示範，點擊會提示功能已移除 -->
+                <button onclick="alert('連結功能：請假申請，此為靜態測試。')" class="p-4 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition duration-150">線上請假</button>
+                <button onclick="alert('連結功能：託藥申請，此為靜態測試。')" class="p-4 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition duration-150">託藥申請</button>
+                <button onclick="alert('連結功能：聯絡分機，此為靜態測試。')" class="p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition duration-150">聯絡分機</button>
+                <button onclick="alert('連結功能：班級網頁，此為靜態測試。')" class="p-4 bg-purple-100 text-purple-700 font-semibold rounded-lg hover:bg-purple-200 transition duration-150">班級網頁</button>
+            </div>
+        </section>
+
+        <!-- 最新公告區塊 -->
+        <section id="announcements" class="mb-12">
+            <h2 class="text-3xl font-bold text-teal-800 mb-6 border-b-2 pb-2 handwriting-font">最新公告</h2>
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-amber-500">
+                    <p class="text-xs text-stone-500">2025-09-01 | 【重要】</p>
+                    <h3 class="text-lg font-semibold text-stone-800">新學期開學日通知及須知</h3>
+                    <p class="text-stone-600 mt-1">請所有家長注意，本學期將於 9 月 10 日正式開始。詳細資料已發送至您的電子郵件信箱。</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-teal-500">
+                    <p class="text-xs text-stone-500">2025-08-25 | 【活動】</p>
+                    <h3 class="text-lg font-semibold text-stone-800">幼兒園中秋節親子活動報名</h3>
+                    <p class="text-stone-600 mt-1">歡迎家長與幼兒一同參與中秋節烤肉活動，名額有限，請盡速報名！</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 學年行事曆區塊 -->
+        <section id="calendar" class="mb-12">
+            <h2 class="text-3xl font-bold text-teal-800 mb-6 border-b-2 pb-2 handwriting-font">學年重要行事曆</h2>
+            <div class="space-y-3">
+                <div class="bg-white p-3 rounded-lg shadow-sm">
+                    <p class="text-sm font-semibold text-teal-700">2025-09-10</p>
+                    <p class="text-stone-800">正式開學日 / 註冊截止日</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow-sm">
+                    <p class="text-sm font-semibold text-teal-700">2025-10-05</p>
+                    <p class="text-stone-800">中秋節親子同樂會 (活動中心)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 活動花絮區塊 -->
+        <section id="gallery" class="mb-12">
+            <h2 class="text-3xl font-bold text-teal-800 mb-6 border-b-2 pb-2 handwriting-font">活動花絮</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://placehold.co/300x300/a7f3d0/0f766e?text=幼兒活動一" class="w-full h-full object-cover" alt="幼兒活動照片一">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://placehold.co/300x300/6ee7b7/047857?text=幼兒活動二" class="w-full h-full object-cover" alt="幼兒活動照片二">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://placehold.co/300x300/34d399/065f46?text=幼兒活動三" class="w-full h-full object-cover" alt="幼兒活動照片三">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://placehold.co/300x300/10b981/0f766e?text=幼兒活動四" class="w-full h-full object-cover" alt="幼兒活動照片四">
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-teal-800 text-white p-6 text-center">
+        <p>© 2025 文林附幼。所有權利保留。</p>
+    </footer>
+
+</body>
 </html>
