@@ -41,3 +41,17 @@ collections:
               - {label: "日期", name: "event_date", widget: "date", format: "YYYY-MM-DD"}
               - {label: "活動說明", name: "description", widget: "string"}
               - {label: "是否為重要活動", name: "is_important", widget: "boolean", default: false}
+// 假設您使用 Static Site Generator (SSG) 將 YML 轉為 JSON
+fetch('/_data/calendar.json') 
+    .then(response => response.json())
+    .then(data => {
+        const calendarList = document.getElementById('calendar-events');
+        data.items.forEach(event => {
+            const item = document.createElement('li');
+            item.innerHTML = `<strong>${event.event_date}</strong>: ${event.event_name} - ${event.description}`;
+            if (event.is_important) {
+                item.style.fontWeight = 'bold';
+            }
+            calendarList.appendChild(item);
+        });
+    });
