@@ -1,43 +1,241 @@
-backend:
-  # 使用 GitHub 作為認證和儲存後端
-  name: github
-  repo: YOUR_GITHUB_USERNAME/kindergarten-website # 請替換成您的 GitHub 用戶名與儲存庫名稱
-  branch: main # 您的網站發佈分支
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幼兒園公開資訊發佈平台</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Google 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-indigo-50 min-h-screen p-4 sm:p-8">
 
-publish_mode: editorial_workflow # 建議啟用，讓老師的變更需要經過審核（Commit）才發佈
+    <header class="text-center mb-10 bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-4xl font-extrabold text-indigo-700">可愛幼兒園 公開資訊平台</h1>
+        <p class="text-lg text-gray-600 mt-2" id="user-status">正在載入使用者資訊...</p>
+    </header>
 
-media_folder: "assets/images" # 圖片上傳的儲存路徑 (CMS 會直接上傳到這個資料夾)
-public_folder: "/assets/images" # 網站上訪問圖片的公開路徑
+    <main class="max-w-6xl mx-auto">
+        <div id="admin-section" class="mb-10 hidden">
+            <!-- 管理員發佈區塊將在此處渲染 -->
+        </div>
 
-# --- 內容集合 (Collections) 定義 ---
+        <div id="public-updates" class="bg-white p-6 rounded-xl shadow-xl">
+            <h2 class="text-3xl font-bold text-pink-600 mb-6 border-b pb-3 border-pink-200">最新公告與行事曆</h2>
+            <!-- 公告列表將在此處渲染 -->
+            <div id="updates-list" class="space-y-4">
+                <p class="text-gray-500">正在載入資料...</p>
+            </div>
+        </div>
+    </main>
 
-collections:
-  - name: "announcements" # 內部名稱
-    label: "📢 最新公告" # 後台介面顯示名稱
-    folder: "_announcements" # 儲存 Markdown 檔案的資料夾
-    create: true # 允許老師新增公告
-    slug: "{{year}}-{{month}}-{{day}}-{{title}}" # 檔案名稱格式
-    fields: # 公告編輯介面中的欄位
-      - {label: "標題", name: "title", widget: "string", required: true}
-      - {label: "發佈日期", name: "date", widget: "datetime", date_format: "YYYY-MM-DD", time_format: false}
-      - {label: "內文", name: "body", widget: "markdown"} # 使用 Markdown 編輯器
-      - {label: "相關圖片", name: "featured_image", widget: "image", required: false}
-      - {label: "文件連結 (Drive/Dropbox)", name: "document_link", widget: "string", required: false}
+    <!-- Firebase 腳本 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  - name: "calendar" # 內部名稱
-    label: "🗓️ 行事曆資料" # 後台介面顯示名稱
-    editor:
-      preview: false # 結構化資料不需要預覽
-    files:
-      - file: "_data/calendar.yml" # 編輯單一個 YMAL 檔案
-        label: "編輯年度行事曆活動"
-        name: "events"
-        fields:
-          - label: "活動列表"
-            name: "items"
-            widget: "list"
-            fields: # 每個活動的欄位
-              - {label: "活動名稱", name: "event_name", widget: "string"}
-              - {label: "日期", name: "event_date", widget: "date", format: "YYYY-MM-DD"}
-              - {label: "活動說明", name: "description", widget: "string"}
-              - {label: "是否為重要活動", name: "is_important", widget: "boolean", default: false}
+        // --- 全域變數與設定 ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kindergarten-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // 為了演示管理員權限，設定一個預設的管理員 ID
+        const ADMIN_ID = 'admin-user-placeholder'; 
+
+        const getCollectionPath = (collectionName) => `/artifacts/${appId}/public/data/${collectionName}`;
+
+        let db;
+        let auth;
+        let userId = null;
+        let role = 'parent'; // 預設為家長/訪客
+
+        // --- 初始化 Firebase ---
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase 初始化失敗:", e);
+        }
+
+        /**
+         * 格式化時間戳
+         * @param {object} timestamp - Firestore Timestamp 物件
+         */
+        const formatDate = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        };
+
+        // --- 認證與角色判斷 ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                // 簡單的角色判斷
+                if (user.uid === ADMIN_ID || (initialAuthToken && user.uid)) { 
+                    role = 'admin';
+                } else {
+                    role = 'parent';
+                }
+            } else {
+                // 如果沒有 Token 或未登入，嘗試匿名登入
+                if (initialAuthToken) {
+                    try {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        userId = auth.currentUser.uid;
+                        if (userId === ADMIN_ID) role = 'admin'; // 再次檢查
+                    } catch (e) {
+                        await signInAnonymously(auth);
+                        userId = auth.currentUser.uid;
+                    }
+                } else {
+                    await signInAnonymously(auth);
+                    userId = auth.currentUser.uid;
+                }
+            }
+            
+            // 更新狀態顯示
+            const statusElement = document.getElementById('user-status');
+            statusElement.innerHTML = `歡迎您！您的身份：<span class="font-bold ${role === 'admin' ? 'text-red-500' : 'text-green-600'}">${role === 'admin' ? '老師/管理員' : '家長/訪客'}</span> (用戶 ID: <span class="text-sm bg-gray-200 p-1 rounded">${userId}</span>)`;
+            
+            // 根據角色顯示或隱藏管理員區塊
+            if (role === 'admin') {
+                document.getElementById('admin-section').classList.remove('hidden');
+                renderAdminUpdatesManager();
+            }
+
+            // 啟動資料監聽（已驗證身份後）
+            setupUpdatesListener();
+        });
+
+        // --- 公開資料顯示 (UpdateList 邏輯) ---
+        const setupUpdatesListener = () => {
+            if (!db || !userId) return; // 確保 db 和 userId 存在
+
+            const updatesCollectionRef = collection(db, getCollectionPath('public_updates'));
+            const updatesQuery = query(updatesCollectionRef, orderBy('date', 'desc'));
+            const updatesList = document.getElementById('updates-list');
+
+            onSnapshot(updatesQuery, (snapshot) => {
+                let htmlContent = '';
+                if (snapshot.empty) {
+                    updatesList.innerHTML = '<p class="text-gray-500">目前沒有任何更新。</p>';
+                    return;
+                }
+
+                snapshot.docs.forEach(doc => {
+                    const item = doc.data();
+                    const isAnnouncement = item.type === 'announcement';
+                    const colorClass = isAnnouncement ? 'bg-red-50 border-red-400' : 'bg-green-50 border-green-400';
+                    const tagClass = isAnnouncement ? 'bg-red-400 text-white' : 'bg-green-400 text-white';
+                    const typeText = isAnnouncement ? '公告' : '行事曆';
+
+                    htmlContent += `
+                        <div class="p-4 rounded-lg shadow-md border-l-4 ${colorClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${tagClass}">
+                                    ${typeText}
+                                </span>
+                                <span class="text-sm text-gray-500">${formatDate(item.date)}</span>
+                            </div>
+                            <h3 class="text-xl font-semibold mt-1 text-gray-800">${item.title}</h3>
+                            <p class="text-gray-600 mt-1 whitespace-pre-wrap">${item.content}</p>
+                        </div>
+                    `;
+                });
+
+                updatesList.innerHTML = htmlContent;
+            }, (error) => {
+                console.error("Error listening to public_updates: ", error);
+                updatesList.innerHTML = '<p class="text-red-500">載入資料失敗，請檢查權限設定。</p>';
+            });
+        };
+
+        // --- 管理員發佈介面 (AdminUpdatesManager 邏輯) ---
+        const renderAdminUpdatesManager = () => {
+            const adminSection = document.getElementById('admin-section');
+            adminSection.innerHTML = `
+                <div class="p-6 bg-yellow-100 rounded-xl shadow-lg border border-yellow-300">
+                    <h2 class="text-2xl font-bold text-yellow-700 mb-4 border-b pb-2 border-yellow-300">發佈公告與行事曆</h2>
+                    <form id="update-form">
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">類型</label>
+                            <select id="update-type" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500">
+                                <option value="announcement">最新公告</option>
+                                <option value="calendar">行事曆活動</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">標題</label>
+                            <input type="text" id="update-title" required class="w-full p-2 border border-gray-300 rounded-lg" placeholder="請輸入標題"/>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">內容</label>
+                            <textarea id="update-content" rows="3" required class="w-full p-2 border border-gray-300 rounded-lg resize-none" placeholder="請輸入詳細內容"></textarea>
+                        </div>
+                        <button type="submit" id="submit-button" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition duration-200 shadow-md">
+                            確認發佈
+                        </button>
+                        <p id="feedback-message" class="mt-3 text-sm text-center"></p>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('update-form').addEventListener('submit', handleUpdateSubmit);
+        };
+
+        const handleUpdateSubmit = async (e) => {
+            e.preventDefault();
+            const submitButton = document.getElementById('submit-button');
+            const feedbackMessage = document.getElementById('feedback-message');
+            
+            const type = document.getElementById('update-type').value;
+            const title = document.getElementById('update-title').value.trim();
+            const content = document.getElementById('update-content').value.trim();
+
+            if (!title || !content) {
+                feedbackMessage.className = 'mt-3 text-sm text-center text-red-600';
+                feedbackMessage.textContent = '標題和內容不能為空。';
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = '發佈中...';
+            feedbackMessage.textContent = '';
+
+            try {
+                await addDoc(collection(db, getCollectionPath('public_updates')), {
+                    type,
+                    title,
+                    content,
+                    date: serverTimestamp(),
+                    authorId: userId,
+                });
+
+                document.getElementById('update-title').value = '';
+                document.getElementById('update-content').value = '';
+                
+                feedbackMessage.className = 'mt-3 text-sm text-center text-green-600';
+                feedbackMessage.textContent = '新增成功！';
+                setTimeout(() => feedbackMessage.textContent = '', 3000);
+
+            } catch (error) {
+                console.error("Error adding update: ", error);
+                feedbackMessage.className = 'mt-3 text-sm text-center text-red-600';
+                feedbackMessage.textContent = `發佈失敗: ${error.message}`;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = '確認發佈';
+            }
+        };
+
+    </script>
+
+</body>
+</html>
